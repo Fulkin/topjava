@@ -3,13 +3,16 @@ package ru.javawebinar.topjava.repository.inmemory;
 import ru.javawebinar.topjava.model.Meal;
 import ru.javawebinar.topjava.repository.MealRepository;
 import ru.javawebinar.topjava.util.MealsUtil;
+import ru.javawebinar.topjava.util.Util;
 
-import java.util.Collection;
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import static ru.javawebinar.topjava.repository.inmemory.InMemoryUserRepository.USER_ID;
@@ -47,11 +50,21 @@ public class InMemoryMealRepository implements MealRepository {
     }
 
     @Override
-    public Collection<Meal> getAll(int userId) {
+    public List<Meal> getAll(int userId) {
+        return getAllFiltered(userId, meal -> true);
+    }
+
+    @Override
+    public List<Meal> getBetweenHalfOpen(LocalDateTime startDate, LocalDateTime endDAte, int userId) {
+        return getAllFiltered(userId, meal -> Util.isBetweenHalfOpen(meal.getDateTime(), startDate, endDAte));
+    }
+
+    private List<Meal> getAllFiltered(int userId, Predicate<Meal> predicate) {
         Map<Integer, Meal> mealMap = usersWithMealMap.get(userId);
-        return  mealMap == null || mealMap.isEmpty() ?
+        return mealMap == null || mealMap.isEmpty() ?
                 Collections.emptyList() : mealMap.values()
                 .stream()
+                .filter(predicate)
                 .sorted(Comparator.comparing(Meal::getDateTime).reversed())
                 .collect(Collectors.toList());
     }
